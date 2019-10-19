@@ -286,7 +286,7 @@
 #endif
 /*! Thread task size */
 #ifndef gMainThreadStackSize_c
-    #define gMainThreadStackSize_c 1600
+    #define gMainThreadStackSize_c 3200
 #endif
 
 /*!=================================================================================================

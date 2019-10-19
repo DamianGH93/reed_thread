@@ -205,6 +205,7 @@ tmrTimerID_t mAppTimerId = gTmrInvalidTimerID_c;
 tmrTimerID_t mTempTimerId = gTmrInvalidTimerID_c;
 tmrTimerID_t mLightTimerId = gTmrInvalidTimerID_c;
 
+static bool CorrectReceived = FALSE;
 
 #if APP_AUTOSTART
 tmrTimerID_t tmrStartApp = gTmrInvalidTimerID_c;
@@ -1533,29 +1534,79 @@ static void APP_Coap_GetPasswordCb
 		coapSession_t *pSession,
 		uint32_t dataLen)
 {
-	uint8_t *ptodata;
+	uint8_t* pToData;
+	pToData = pData;
 	coapSession_t *pLight = COAP_OpenSession(mAppCoapInstId);
 	static uint8_t pMySessionPayload[11]={"externalLed"};
 	static uint32_t pMyPayloadSize=11;
 	shell_writeN(pData, dataLen); /* Only as an example of the password recevied */
-	ptodata = pData;
-	if(*ptodata)
-	{
-		TMR_StartIntervalTimer(mTempTimerId, gAppTempTimeout_c, APP_Coap_GetTemp, NULL);
-		TMR_StartSingleShotTimer(mLightTimerId, gAppLightTimeout_c, APP_Coap_DoorClose, NULL);
-		shell_write("\n\rCorrect Password\n");
-		pLight->code = gCoapPOST_c;
-		pLight->msgType = gCoapConfirmable_c;
-		pLight->pCallback = NULL;
-		pLight->remoteAddr = APP_DEFAULT_DEST_ADDR;
-		COAP_SetUriPath(pLight,(coapUriPath_t *)&gAPP_LIGHT_URI_PATH);
-		COAP_SendMsg(pLight,pMySessionPayload,pMyPayloadSize);
-	}
-	else{
-		/* Incorrect password*/
-		shell_write("\n\rIncorrect Password\n");
-		//bPasswordCorrect = true;
-	}
+	if (gCoapConfirmable_c == pSession->msgType)
+		{
+			if (gCoapGET_c == pSession->code)
+			{
+				if(*pToData)
+				{
+					if(!CorrectReceived)
+					{
+						TMR_StartIntervalTimer(mTempTimerId, gAppTempTimeout_c, APP_Coap_GetTemp, NULL);
+						TMR_StartSingleShotTimer(mLightTimerId, gAppLightTimeout_c, APP_Coap_DoorClose, NULL);
+						shell_write("\n\rCorrect Password\n");
+						pLight->code = gCoapPOST_c;
+						pLight->msgType = gCoapConfirmable_c;
+						pLight->pCallback = NULL;
+						FLib_MemCpy(&pLight->remoteAddr,&gCoapDestAddress,sizeof(ipAddr_t));
+						COAP_SetUriPath(pLight,(coapUriPath_t *)&gAPP_LIGHT_URI_PATH);
+						COAP_SendMsg(pLight,pMySessionPayload,pMyPayloadSize);
+						CorrectReceived = TRUE;
+					}
+				}
+				else{
+					/* Incorrect password*/
+					shell_write("\n\rIncorrect Password\n");
+					//bPasswordCorrect = true;
+				}
+			}
+			if (gCoapPOST_c == pSession->code)
+			{
+				shell_write("NOT SUPPORTED ");
+			}
+			if (gCoapFailure_c!=sessionStatus)
+			{
+				COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, pMySessionPayload, pMyPayloadSize);
+			}
+		}
+		else if(gCoapNonConfirmable_c == pSession->msgType)
+		{
+			if (gCoapGET_c == pSession->code)
+			{
+				if(*pToData)
+				{
+					if(!CorrectReceived)
+					{
+						TMR_StartIntervalTimer(mTempTimerId, gAppTempTimeout_c, APP_Coap_GetTemp, NULL);
+						TMR_StartSingleShotTimer(mLightTimerId, gAppLightTimeout_c, APP_Coap_DoorClose, NULL);
+						shell_write("\n\rCorrect Password\n");
+						pLight->code = gCoapPOST_c;
+						pLight->msgType = gCoapConfirmable_c;
+						pLight->pCallback = NULL;
+						FLib_MemCpy(&pLight->remoteAddr,&gCoapDestAddress,sizeof(ipAddr_t));
+						COAP_SetUriPath(pLight,(coapUriPath_t *)&gAPP_LIGHT_URI_PATH);
+						COAP_SendMsg(pLight,pMySessionPayload,pMyPayloadSize);
+						CorrectReceived = TRUE;
+					}
+				}
+				else{
+					/* Incorrect password*/
+					shell_write("\n\rIncorrect Password\n");
+					//bPasswordCorrect = true;
+				}
+			}
+			if (gCoapPOST_c == pSession->code)
+			{
+				shell_write(" NOT SUPPORTED");
+			}
+		}
+
 }
 
 /*!*************************************************************************************************
@@ -1577,18 +1628,8 @@ static void APP_Coap_GetTempCb
 		coapSession_t *pSession,
 		uint32_t dataLen)
 {
-	/*static uint8_t pMySessionPayload[3]={0x31,0x32,0x33};
-	static uint32_t pMyPayloadSize=3;
-	coapSession_t *pTemp = COAP_OpenSession(mAppCoapInstId);
-	pTemp->code = gCoapGET_c;
-	pTemp->msgType = gCoapConfirmable_c;
-	pTemp->pCallback = NULL;
-	pTemp->remoteAddr = APP_DEFAULT_DEST_ADDR;
-	COAP_SetUriPath(pTemp,(coapUriPath_t *)&gAPP_TEMP_URI_PATH);
-	COAP_SendMsg(pTemp,pMySessionPayload,pMyPayloadSize);*/
-	uint8_t *pTodata;
-	pTodata = pData;
-	shell_writeN(pTodata, dataLen);
+	shell_write("\n\r Temperature from sensor: ");
+	shell_writeN(pData, dataLen);
 }
 
 static void APP_Coap_GetTemp
@@ -1647,22 +1688,57 @@ static void APP_Coap_Open_DoorCb
 		coapSession_t *pSession,
 		uint32_t dataLen)
 {
-	/* Initializes the session attributes for Password request */
-	shell_write("\n\r Request to Open Door received");
-	uint8_t *pCommand;
-	coapMsgTypesAndCodes_t coapMessageType;
-	coapSession_t *pKeyPassword = COAP_OpenSession(mAppCoapInstId);
 	static uint8_t pMySessionPayload[3]={0x31,0x32,0x33};
 	static uint32_t pMyPayloadSize=3;
-	coapMessageType = gCoapConfirmable_c;
-	pCommand = gCoapGET_c;
-	pKeyPassword->code = gCoapGET_c;
-	pKeyPassword->msgType = gCoapConfirmable_c;
-	pKeyPassword->pCallback = APP_Coap_GetPasswordCb; //Update needed LuVa
-	pKeyPassword->remoteAddr = APP_DEFAULT_DEST_ADDR; //Update needed LuVa
-	COAP_SetUriPath(pKeyPassword,(coapUriPath_t *)&gAPP_KEY_PASSWORD_URI_PATH);
-	//COAP_Send(pKeyPassword,pKeyPassword->msgType,pKeyPassword->code,pMyPayloadSize);
-	COAP_Send(pKeyPassword,coapMessageType,pCommand,pMyPayloadSize);
+	coapSession_t *pMySession = NULL;
+	pMySession = COAP_OpenSession(mAppCoapInstId);
+	//COAP_AddOptionToList(pMySession,COAP_URI_PATH_OPTION, APP_RESOURCE2_URI_PATH,SizeOfString(APP_RESOURCE2_URI_PATH));
+	if (gCoapConfirmable_c == pSession->msgType)
+	{
+		if (gCoapGET_c == pSession->code)
+		{
+			shell_write(" NOT SUPPORTED ");
+		}
+		if (gCoapPOST_c == pSession->code)
+		{
+			shell_write("\n\r Request to Open Door received");
+			coapSession_t *pKeyPassword = COAP_OpenSession(mAppCoapInstId);
+			static uint8_t pMySessionPayload[3]={0x31,0x32,0x33};
+			static uint32_t pMyPayloadSize=3;
+			pKeyPassword->code = gCoapGET_c;
+			pKeyPassword->msgType = gCoapConfirmable_c;
+			pKeyPassword->pCallback = APP_Coap_GetPasswordCb; //Update needed LuVa
+			FLib_MemCpy(&pKeyPassword->remoteAddr,&gCoapDestAddress,sizeof(ipAddr_t));
+			//pKeyPassword->remoteAddr = APP_DEFAULT_DEST_ADDR; //Update needed LuVa
+			COAP_SetUriPath(pKeyPassword,(coapUriPath_t *)&gAPP_KEY_PASSWORD_URI_PATH);
+			COAP_SendMsg(pKeyPassword,pMySessionPayload,pMyPayloadSize);
+		}
+		if (gCoapFailure_c!=sessionStatus)
+		{
+			COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, pMySessionPayload, pMyPayloadSize);
+		}
+	}
+	else if(gCoapNonConfirmable_c == pSession->msgType)
+	{
+		if (gCoapGET_c == pSession->code)
+		{
+			shell_write(" NOT SUPPORTED ");
+		}
+		if (gCoapPOST_c == pSession->code)
+		{
+			shell_write("\n\r Request to Open Door received");
+			coapSession_t *pKeyPassword = COAP_OpenSession(mAppCoapInstId);
+			static uint8_t pMySessionPayload[3]={0x31,0x32,0x33};
+			static uint32_t pMyPayloadSize=3;
+			pKeyPassword->code = gCoapGET_c;
+			pKeyPassword->msgType = gCoapConfirmable_c;
+			pKeyPassword->pCallback = APP_Coap_GetPasswordCb; //Update needed LuVa
+			FLib_MemCpy(&pKeyPassword->remoteAddr,&gCoapDestAddress,sizeof(ipAddr_t));
+			//pKeyPassword->remoteAddr = APP_DEFAULT_DEST_ADDR; //Update needed LuVa
+			COAP_SetUriPath(pKeyPassword,(coapUriPath_t *)&gAPP_KEY_PASSWORD_URI_PATH);
+			COAP_SendMsg(pKeyPassword,pMySessionPayload,pMyPayloadSize);
+		}
+	}
 }
 
 /*!*************************************************************************************************
@@ -1686,41 +1762,41 @@ static void APP_Coap_ViolationCb
 {
 	uint8_t *pToData;
 	pToData = pData;
-	uint8_t Back[5] = {'b','a','c','k'};
+	uint8_t Back[4] = {'b','a','c','k'};
 	uint8_t Front[5] = {'f','r','o','n','t'};
 	uint32_t ackPloadSize = 3;
 	uint8_t *pPayload;
 	uint8_t Payload_1[3] = {0x31,0x32,0x33};
 	uint8_t Payload_2[3] = {0x34,0x35,0x36};
 	/* Send CoAP ACK */
-	    if(gCoapGET_c == pSession->code)
-	    {
-	    	if(memcmp(*pToData,Back[0],sizeof(Back)))
-	    	{
-	    		shell_write("\n\rViolation in backyard");
-	    		pPayload = Payload_1[0];
+	if(gCoapGET_c == pSession->code)
+	{
+		if(memcmp(*pToData,Back[0],sizeof(Back)))
+		{
+			shell_write("\n\rViolation in backyard");
+			pPayload = Payload_1[0];
 
-	    	}else{
-	    		if(memcmp(*pToData,Front[0],sizeof(Front)))
-	    		{
-	    			shell_write("\n\rViolation in frontyard");
-	    			pPayload = Payload_2[0];
-	    		}else{
-	    			shell_write("\n\rNo Violation found");
-	    		}
-	    	}
-	    }
-	    if(gCoapConfirmable_c == pSession->msgType)
-	    {
-	    	if(gCoapGET_c == pSession->code)
-	    	{
-	    		COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, pPayload, ackPloadSize);
-	    	}
-	    	else
-	    	{
-	    		COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, NULL, 0);
-	    	}
-	    }
+		}else{
+			if(memcmp(*pToData,Front[0],sizeof(Front)))
+			{
+				shell_write("\n\rViolation in frontyard");
+				pPayload = Payload_2[0];
+			}else{
+				shell_write("\n\rNo Violation found");
+			}
+		}
+	}
+	if(gCoapConfirmable_c == pSession->msgType)
+	{
+		if(gCoapGET_c == pSession->code)
+		{
+			COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, pPayload, ackPloadSize);
+		}
+		else
+		{
+			COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, NULL, 0);
+		}
+	}
 }
 
 /*!*************************************************************************************************
