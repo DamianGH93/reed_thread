@@ -136,16 +136,19 @@ static void APP_SendDataSinkRelease(void *pParam);
 static void APP_SendLedRgbOn(void *pParam);
 static void APP_SendLedRgbOff(void *pParam);
 
-static void APP_SendOpenDoor(void *pParam);
+//static void APP_SendOpenDoor(void *pParam);
 
-static void APP_Sendled1on(void *pParam);
+//static void APP_Sendled1on(void *pParam);
 
-static void APP_Sendled1off(void *pParam);
+//static void APP_Sendled1off(void *pParam);
 
-static void APP_Sendled2on(void *pParam);
+//static void APP_Sendled2on(void *pParam);
 
-static void APP_Sendled2off(void *pParam);
+//static void APP_Sendled2off(void *pParam);
 
+static void APP_ViolationBack(void *pParam);
+
+static void APP_ViolationFront(void *pParam);
 
 static void APP_SendLedFlash(void *pParam);
 static void APP_SendLedColorWheel(void *pParam);
@@ -161,9 +164,9 @@ static void App_RestoreLeaderLed(void *param);
 
 //static void APP_CoapTemperatureCb(coapSessionStatus_t sessionStatus, void *pData, coapSession_t *pSession, uint32_t dataLen);
 
-//static void APP_CoapLightCb(coapSessionStatus_t sessionStatus, void *pData, coapSession_t *pSession, uint32_t dataLen);
+static void APP_CoapLightCb(coapSessionStatus_t sessionStatus, void *pData, coapSession_t *pSession, uint32_t dataLen);
 
-//static void APP_CoapViolationCb(coapSessionStatus_t sessionStatus, void *pData, coapSession_t *pSession, uint32_t dataLen);
+static void APP_CoapViolationCb(coapSessionStatus_t sessionStatus, void *pData, coapSession_t *pSession, uint32_t dataLen);
 
 static void APP_CoapKeyPasswordCb(coapSessionStatus_t sessionStatus, void *pData, coapSession_t *pSession, uint32_t dataLen);
 
@@ -544,9 +547,9 @@ static void APP_InitCoapDemo
 
 									 //{APP_CoapTemperatureCb, (coapUriPath_t*)&gAPP_TEMPERATRE_URI_PATH},
 
-									 //{APP_CoapLightCb, (coapUriPath_t*)&gAPP_LIGHT_URI_PATH},
+									 {APP_CoapLightCb, (coapUriPath_t*)&gAPP_LIGHT_URI_PATH},
 
-									//{APP_CoapViolationCb, (coapUriPath_t*)&gAPP_VIOLATION_URI_PATH},
+									{APP_CoapViolationCb, (coapUriPath_t*)&gAPP_VIOLATION_URI_PATH},
 
 									 //{APP_CoapKeyPasswordCb, (coapUriPath_t*)&gAPP_KEY_PASSWORD_URI_PATH},
 
@@ -731,12 +734,14 @@ static void APP_AppModeHandleKeyboard
         case gKBD_EventPB1_c:
             /* Data sink create */
             //(void)NWKU_SendMsg(APP_SendDataSinkCreate, NULL, mpAppThreadMsgQueue);
+	    (void)NWKU_SendMsg(APP_ViolationFront, NULL, mpAppThreadMsgQueue);
         	//passwordok = 1;
             break;
 #if gKBD_KeysCount_c > 1
         case gKBD_EventPB2_c:
             /* Report temperature */
             //(void)NWKU_SendMsg(APP_ReportTemp, NULL, mpAppThreadMsgQueue);
+	    (void)NWKU_SendMsg(APP_ViolationBack, NULL, mpAppThreadMsgQueue);
         	//passwordok = 0;
             break;
         case gKBD_EventPB3_c:
@@ -1054,7 +1059,7 @@ static void APP_SendLedCommand
     uint8_t *pCommand,
     uint8_t dataLen
 )
-{
+{/*
     ifHandle_t ifHandle = THR_GetIpIfPtrByInstId(mThrInstanceId);
 
     if(!IP_IF_IsMyAddr(ifHandle->ifUniqueId, &gCoapDestAddress))
@@ -1084,7 +1089,7 @@ static void APP_SendLedCommand
     else
     {
         APP_ProcessLedCmd(pCommand, dataLen);
-    }
+    }*/
 }
 
 /*!*************************************************************************************************
@@ -1448,70 +1453,6 @@ static void App_RestoreLeaderLed
     App_UpdateStateLeds(gDeviceState_Leader_c);
 }
 
-/*!*************************************************************************************************
-URI Callback temperature
-***************************************************************************************************/
-
-
-//static void APP_CoapTemperatureCb
-		//(
-		//    coapSessionStatus_t sessionStatus,
-		//    void *pData,
-		//    coapSession_t *pSession,
-		//    uint32_t dataLen
-		//)
-		//{
-		//    uint8_t *pTempString = NULL;
-		//    uint32_t ackPloadSize = 0, maxDisplayedString = 10;
-
-		    /* Send CoAP ACK */
-		//    if(gCoapGET_c == pSession->code)
-		 //   {
-		        /* Get Temperature */
-		 //       pTempString = App_GetTempDataString();
-		 //       ackPloadSize = strlen((char*)pTempString);
-		  //  }
-		    /* Do not parse the message if it is duplicated */
-		  //  else if((gCoapPOST_c == pSession->code) && (sessionStatus == gCoapSuccess_c))
-		  //  {
-		   //     if(NULL != pData)
-		   //     {
-		    //        char addrStr[INET6_ADDRSTRLEN];
-		    //        uint8_t temp[10];
-
-		    //        ntop(AF_INET6, &pSession->remoteAddr, addrStr, INET6_ADDRSTRLEN);
-		     //       shell_write("\r");
-
-		     //       if(0 != dataLen)
-		     //       {
-		                /* Prevent from buffer overload */
-		      //          (dataLen >= maxDisplayedString) ? (dataLen = (maxDisplayedString - 1)) : (dataLen);
-		       //         temp[dataLen]='\0';
-		      //          FLib_MemCpy(temp,pData,dataLen);
-		      //          shell_printf((char*)temp);
-		      //      }
-		       //     shell_printf("\tFrom IPv6 Address: %s\n\r", addrStr);
-		       //     shell_refresh();
-		      //  }
-		   // }
-
-		  //  if(gCoapConfirmable_c == pSession->msgType)
-		  //  {
-		    //    if(gCoapGET_c == pSession->code)
-		    //    {
-		    //        COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, pTempString, ackPloadSize);
-		     //   }
-		     //   else
-		     //   {
-		     //       COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, NULL, 0);
-		    ///    }
-		   // }
-
-		//    if(pTempString)
-		//    {
-		 //       MEM_BufferFree(pTempString);
-		//    }
-	//	}
 
 /*!*************************************************************************************************
 APP Send light
@@ -1521,7 +1462,7 @@ static void APP_SendLightCommand
     uint8_t *pCommand,
     uint8_t dataLen
 )
-{
+{/*
     ifHandle_t ifHandle = THR_GetIpIfPtrByInstId(mThrInstanceId);
 
     if(!IP_IF_IsMyAddr(ifHandle->ifUniqueId, &gCoapDestAddress))
@@ -1551,7 +1492,7 @@ static void APP_SendLightCommand
     else
     {
         APP_ProcessLight(pCommand, dataLen);
-    }
+    }*/
 }
 
 
@@ -1623,17 +1564,17 @@ static void APP_CoapLightCb
 )
 {
     /* Process the command only if it is a POST method */
-   if((pData) && (sessionStatus == gCoapSuccess_c) && (pSession->code == gCoapPOST_c))
+   /*if((pData) && (sessionStatus == gCoapSuccess_c) && (pSession->code == gCoapPOST_c))
    {
        APP_ProcessLight(pData, dataLen);
    }
 
     /* Send the reply if the status is Success or Duplicate */
-   if((gCoapFailure_c != sessionStatus) && (gCoapConfirmable_c == pSession->msgType))
+   /*if((gCoapFailure_c != sessionStatus) && (gCoapConfirmable_c == pSession->msgType))
     {
         /* Send CoAP ACK */
-      COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, NULL, 0);
-   }
+      /*COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, NULL, 0);
+   }*/
 }
 
 /*!*************************************************************************************************
@@ -1676,29 +1617,119 @@ static void APP_ProcessLight
 
 
 /*!*************************************************************************************************
-URI Callback Violation
+
+APP_SendViolationCommand
+
 ***************************************************************************************************/
 
-static void APP_CoapViolationCb
-(
-    coapSessionStatus_t sessionStatus,
-   void *pData,
-    coapSession_t *pSession,
-    uint32_t dataLen
-)
-{
-    /* Process the command only if it is a POST method */
-    if((pData) && (sessionStatus == gCoapSuccess_c) && (pSession->code == gCoapPOST_c))
-    {
-        APP_ProcessLight(pData, dataLen);
-   }
+static void APP_SendViolationCommand
 
-    /* Send the reply if the status is Success or Duplicate */
-   if((gCoapFailure_c != sessionStatus) && (gCoapConfirmable_c == pSession->msgType))
-   {
-        /* Send CoAP ACK */
-       COAP_Send(pSession, gCoapMsgTypeAckSuccessChanged_c, NULL, 0);
-   }
+(
+
+uint8_t *pCommand,
+
+uint8_t dataLen
+
+)
+
+{
+
+ifHandle_t ifHandle = THR_GetIpIfPtrByInstId(mThrInstanceId);
+
+if(!IP_IF_IsMyAddr(ifHandle->ifUniqueId, &gCoapDestAddress))
+
+{
+
+coapSession_t *pSession = COAP_OpenSession(mAppCoapInstId);
+
+if(pSession)
+
+{
+
+coapMsgTypesAndCodes_t coapMessageType = gCoapMsgTypeConPost_c;
+
+pSession->pCallback = NULL;
+
+FLib_MemCpy(&pSession->remoteAddr, &gCoapDestAddress, sizeof(ipAddr_t));
+
+COAP_SetUriPath(pSession,(coapUriPath_t *)&gAPP_VIOLATION_URI_PATH);
+
+if(!IP6_IsMulticastAddr(&gCoapDestAddress))
+
+{
+
+coapMessageType = gCoapMsgTypeConPost_c;
+
+pSession->pCallback = APP_CoapGenericCallback;
+
+}
+
+else
+
+{
+
+//APP_ProcessLedCmd(pCommand, dataLen);
+
+}
+
+COAP_Send(pSession, coapMessageType, pCommand, dataLen);
+
+}
+
+}
+
+else
+
+{
+
+//APP_ProcessLedCmd(pCommand, dataLen);
+
+}
+
+}
+
+/*!*************************************************************************************************
+
+ViolationBack
+
+***************************************************************************************************/
+
+static void APP_ViolationBack
+
+(
+
+void *pParam
+
+)
+
+{
+
+uint8_t aCommand[] = {"back"};
+
+APP_SendViolationCommand(aCommand, sizeof(aCommand));
+
+}
+
+/*!*************************************************************************************************
+
+ViolationFront
+
+***************************************************************************************************/
+
+static void APP_ViolationFront
+
+(
+
+void *pParam
+
+)
+
+{
+
+uint8_t aCommand[] = {"front"};
+
+APP_SendViolationCommand(aCommand, sizeof(aCommand));
+
 }
 
 /*!*************************************************************************************************
@@ -1792,7 +1823,7 @@ static void APP_ViolationCommand
     uint8_t *pCommand,
     uint8_t dataLen
 )
-{
+{/*
     ifHandle_t ifHandle = THR_GetIpIfPtrByInstId(mThrInstanceId);
 
     if(!IP_IF_IsMyAddr(ifHandle->ifUniqueId, &gCoapDestAddress))
@@ -1822,7 +1853,7 @@ static void APP_ViolationCommand
     else
     {
         APP_ProcessLedCmd(pCommand, dataLen);
-    }
+    }*/
 }
 #if LARGE_NETWORK
 /*!*************************************************************************************************
